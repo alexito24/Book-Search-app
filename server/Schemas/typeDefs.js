@@ -4,9 +4,20 @@ const typeDefs = gql`
   type User {
     _id: ID
     username: String
-    email: String
-    password: String
-    savedBooks: [String]!
+    email: String!
+    password: String!
+    bookCount: string
+    savedBooks: [String]
+  }
+
+  type Book {
+    _id: ID
+    bookId: string
+    authors: [string]
+    description: string
+    title: string
+    image: string
+    link: string
   }
 
   type Auth {

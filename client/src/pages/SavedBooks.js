@@ -7,7 +7,7 @@ import {
   Button,
 } from "react-bootstrap";
 
-import { REMOVE_BOOK } from "../utils/API";
+import { REMOVE_BOOK } from "../utils/mutations";
 import { GET_ME } from "../utils/queries";
 import Auth from "../utils/auth";
 import { removeBookId } from "../utils/localStorage";

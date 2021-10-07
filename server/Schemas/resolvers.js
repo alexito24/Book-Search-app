@@ -42,21 +42,19 @@ const resolvers = {
     },
 
     // Add a third argument to the resolver to access data in our `context`
-    saveBook: async (parent, { userId, book }, context) => {
-      // If context has a `user` property, that means the user executing this mutation has a valid JWT and is logged in
+    saveBook: async (parent, { bookData }, context) => {
       if (context.user) {
-        return User.findOneAndUpdate(
-          { _id: userId },
-          {
-            $addToSet: { savedBooks: book },
-          },
-          {
-            new: true,
-            runValidators: true,
-          }
+        //   const savedBook = await Book.create({ ...args, username: context.user.username });
+
+        const updatedUser = await User.findByIdAndUpdate(
+          { _id: context.user._id },
+          { $addToSet: { savedBooks: bookData } },
+          { new: true }
         );
+
+        return updatedUser;
       }
-      // If user attempts to execute this mutation and isn't logged in, throw an error
+
       throw new AuthenticationError("You need to be logged in!");
     },
     // Set up mutation so a logged in user can only remove their profile and no one else's

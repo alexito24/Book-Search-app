@@ -1,79 +1,68 @@
-const { AuthenticationError } = require("apollo-server-express");
-const { User } = require("../models");
-const { signToken } = require("../utils/auth");
+const { AuthenticationError } = require('apollo-server-express');
+const { User } = require('../models');
+const { signToken } = require('../utils/auth');
 
 const resolvers = {
   Query: {
-    user: async (parent, { userId }) => {
-      return User.findOne({ _id: userId });
-    },
-    // By adding context to our query, we can retrieve the logged in user without specifically searching for them
     me: async (parent, args, context) => {
       if (context.user) {
-        return User.findOne({ _id: context.user._id });
+        const userData = await User.findOne({ _id: context.user._id }).select('-__v -password');
+
+        return userData;
       }
-      throw new AuthenticationError("You need to be logged in!");
+
+      throw new AuthenticationError('Not logged in');
     },
   },
 
   Mutation: {
-    addUser: async (parent, { username, email, password }) => {
-      const user = await User.create({ username, email, password });
+    addUser: async (parent, args) => {
+      const user = await User.create(args);
       const token = signToken(user);
 
       return { token, user };
     },
-    loginUser: async (parent, { email, password }) => {
+    login: async (parent, { email, password }) => {
       const user = await User.findOne({ email });
 
-      console.log(email, password);
       if (!user) {
-        throw new AuthenticationError("No profile with this email found!");
+        throw new AuthenticationError('Incorrect credentials');
       }
 
       const correctPw = await user.isCorrectPassword(password);
 
       if (!correctPw) {
-        throw new AuthenticationError("Incorrect password!");
+        throw new AuthenticationError('Incorrect credentials');
       }
 
       const token = signToken(user);
       return { token, user };
     },
-
-    // Add a third argument to the resolver to access data in our `context`
     saveBook: async (parent, { bookData }, context) => {
       if (context.user) {
-        //   const savedBook = await Book.create({ ...args, username: context.user.username });
-
-        const updatedUser = await User.findOneAndUpdate(
+        const updatedUser = await User.findByIdAndUpdate(
           { _id: context.user._id },
-          { $addToSet: { savedBooks: bookData } },
+          { $push: { savedBooks: bookData } },
           { new: true }
         );
 
         return updatedUser;
       }
 
-      throw new AuthenticationError("You need to be logged in!");
+      throw new AuthenticationError('You need to be logged in!');
     },
-    // Set up mutation so a logged in user can only remove their profile and no one else's
-    removeUser: async (parent, args, context) => {
+    removeBook: async (parent, { bookId }, context) => {
       if (context.user) {
-        return User.findOneAndDelete({ _id: context.user._id });
-      }
-      throw new AuthenticationError("You need to be logged in!");
-    },
-    // Make it so a logged in user can only remove a skill from their own profile
-    removeBook: async (parent, { book }, context) => {
-      if (context.user) {
-        return User.findOneAndUpdate(
+        const updatedUser = await User.findOneAndUpdate(
           { _id: context.user._id },
-          { $pull: { savedBooks: book } },
+          { $pull: { savedBooks: { bookId } } },
           { new: true }
         );
+
+        return updatedUser;
       }
-      throw new AuthenticationError("You need to be logged in!");
+
+      throw new AuthenticationError('You need to be logged in!');
     },
   },
 };
